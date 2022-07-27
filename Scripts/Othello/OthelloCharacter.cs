@@ -44,5 +44,3 @@ public class OthelloCharacter : MonoBehaviour
         SetColor(state == OthelloSystem.eCharacterState.Face);
     }
 }
-
-hao

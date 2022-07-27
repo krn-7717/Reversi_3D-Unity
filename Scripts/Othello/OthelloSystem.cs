@@ -41,6 +41,21 @@ public class OthelloSystem : MonoBehaviour
     //ターン制御
     private eCharacterState _turn = eCharacterState.Back;
 
+    //ひっくり返す対象
+    class Position {
+        public int _x;
+        public int _y;
+
+        public Position(int x, int y) {
+            _x = x;
+            _y = y;
+        }
+    }
+
+    //ひっくり返す処理の方向
+    int[] TURN_CHECK_X = new int[] {-1, -1, 0, 1, 1, 1, 0, -1};
+    int[] TURN_CHECK_Y = new int[] {0, 1, 1, 1, 0, -1, -1, -1};
+
     // Start is called before the first frame update
     void Start()
     {
@@ -53,6 +68,7 @@ public class OthelloSystem : MonoBehaviour
                 newObject.transform.localPosition = new Vector3(-(FIELD_SIZE_X - 1) * 0.5f + j, 0.125f, -(FIELD_SIZE_Y - 1) * 0.5f + i);
                 _fieldCharactersObject[i, j] = newObject;
                 _fieldCharacters[j, i] = newCharacter;
+
                 //ブロックの状態
                 _fieldCharactersStateFinal[i, j] = eCharacterState.None;
             }
@@ -77,30 +93,84 @@ public class OthelloSystem : MonoBehaviour
         int deltaY = 0;
         if (Input.GetKeyDown(KeyCode.UpArrow)) {
             deltaY += 1;
-            //_cursorObject.transform.localPosition += transform.forward;
         }
         if (Input.GetKeyDown(KeyCode.DownArrow)) {
             deltaY -= 1;
-            //_cursorObject.transform.localPosition -= transform.forward;
         }
         if (Input.GetKeyDown(KeyCode.LeftArrow)) {
             deltaX -= 1;
-            //_cursorObject.transform.localPosition -= transform.right;
         }
         if (Input.GetKeyDown(KeyCode.RightArrow)) {
             deltaX += 1;
-            //_cursorObject.transform.localPosition += transform.right;
         }
         _cursorX += deltaX;
         _cursorY += deltaY;
-        _cursorObject.transform.localPosition = new Vector3(-(FIELD_SIZE_X - 1) * 0.5f + _cursorX, 0.0f, -(FIELD_SIZE_Y - 1) * 0.5f + _cursorY);
+        _cursorObject.transform.localPosition = new Vector3(-(FIELD_SIZE_X - 1) * 0.5f + _cursorX, 0.5f, -(FIELD_SIZE_Y - 1) * 0.5f + _cursorY);
 
         if (Input.GetKeyDown(KeyCode.Return)) {
-            _fieldCharactersStateFinal[_cursorX, _cursorY] = _turn;
+            if (0 <= _cursorX && _cursorX < FIELD_SIZE_X && 0 <= _cursorY && _cursorY < FIELD_SIZE_Y && _fieldCharactersStateFinal[_cursorY, _cursorX] == eCharacterState.None && Turn(false) > 0) {
+                _fieldCharactersStateFinal[_cursorY, _cursorX] = _turn;
+                Turn(true);
+                _turn = ((_turn == eCharacterState.Back) ? eCharacterState.Face : eCharacterState.Back);
+            }
         }
         
         //ブロックの状態を更新
         UpdateCharacterState();
+    }
+
+    int Turn(bool isTurn) {
+        //相手の色
+        eCharacterState opponentColor = ((_turn == eCharacterState.Back) ? eCharacterState.Face : eCharacterState.Back);
+
+        //ひっくり返せる数
+        bool isValidTurn = false; //ひっくり返せるかどうか
+        List<Position> positionList = new List<Position>();
+        int count = 0;
+
+        int deltaX = 0, deltaY = 0;
+        for (int i = 0; i < TURN_CHECK_X.Length; i++) {
+            int x = _cursorX;
+            int y = _cursorY;
+
+            deltaX = TURN_CHECK_X[i];
+            deltaY = TURN_CHECK_Y[i];
+
+            isValidTurn = false;
+            positionList.Clear();
+
+            while (true) {
+                x += deltaX;
+                y += deltaY;
+                if (!(0 <= x && x < FIELD_SIZE_X && 0 <= y && y < FIELD_SIZE_Y)) {
+                    //範囲外
+                    break;
+                }
+                if (_fieldCharactersStateFinal[y, x] == opponentColor) {
+                    //ひっくり返す対象
+                    positionList.Add(new Position(x, y));    
+                } else if (_fieldCharactersStateFinal[y, x] == _turn) {
+                    //ひっくり返せる
+                    isValidTurn = true;
+                    break;
+                } else {
+                    //なにもない
+                    break;
+                }
+            }
+            //実際のひっくり返す処理
+            if (isValidTurn) {
+                count += positionList.Count;
+
+                if (isTurn) {
+                    for (int j = 0; j < positionList.Count; j++) {
+                        Position pos = positionList[j];
+                        _fieldCharactersStateFinal[pos._y, pos._x] = _turn;
+                    }
+                }
+            }
+        }
+        return count;
     }
 
     void UpdateCharacterState() {
@@ -112,5 +182,4 @@ public class OthelloSystem : MonoBehaviour
             }
         }
     }
-
 }
